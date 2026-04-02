@@ -1,34 +1,22 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React from "react";
 import { useNavigate } from "react-router-dom";
+import Loader from "../components/Loader";
+import Navbar from "../components/UnifiedNavbar";
+import { useAuth } from "../context/AuthContext";
+import { useCourses } from "../context/CourseContext";
 
+const API_URL = import.meta.env.VITE_API_URL;
 
 const Courses = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { courses, isLoading: loading, error } = useCourses();
 
-const navigate = useNavigate();
-
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const res = await axios.get("http://localhost:3000/courses");
-        setCourses(res.data.courses);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-        setError("Failed to load courses. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCourses();
-  }, []);
-  
   return (
     <>
+      {/* Unified Navbar - automatically handles auth state */}
+      <Navbar />
+      
       <div
         className="flex items-center justify-center min-h-screen px-6 text-white"
         style={{
@@ -55,69 +43,69 @@ const navigate = useNavigate();
             </p>
           </div>
 
-          {loading && (
-            <p className="text-2xl text-center text-white">
-              Loading courses...
-            </p>
-          )}
+          {loading && <Loader />}
           {error && <p className="text-xl text-center text-red-500">{error}</p>}
 
-          <div className="grid w-full grid-cols-1 gap-10 ml-16 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-             <div
-             key={course._id}
-             className="flex flex-col justify-between h-full p-5 transition duration-300 border rounded-lg shadow-md bg-stone-950 border-fuchsia-700 hover:scale-105 w-80"
-           >
-             <img
-               src={
-                 course.imageUrl?.startsWith("http")
-                   ? course.imageUrl
-                   : `http://localhost:3000${course.imageUrl}`
-               }
-               alt={course.name}
-               className="object-cover w-full h-48 rounded"
-             />
-           
-             <h3 className="flex items-center justify-center mt-4 text-xl font-semibold text-white">{course.name}</h3>
-           
-             <div className="flex items-center justify-center mt-2">
-               <span className="px-3 py-1 text-sm text-white rounded-full bg-fuchsia-900">
-                 Instructor : {course.instructor?.name || "Instructor"}
-               </span>
-             </div>
-             <div className="flex justify-center items-center gap-4 mt-3.5">
-               <span className="px-3 py-1 text-base text-white border border-solid rounded-md bg-fuchsia-950 bg-opacity-60 border-stone-900">
-                 HINDI
-               </span>
-             </div>
-           
-             <div className="flex justify-between gap-5 mt-auto">
-               <div className="flex flex-col">
-                 <span className="mt-4 text-base text-white">Limited Time Discount</span>
-                 <p className="mt-4 text-lg text-white">
-                   ₹{course.price}{" "}
-                   <span className="ml-2 text-gray-400 line-through">
-                     ₹{course.originalPrice || course.price * 2}
-                   </span>
-                 </p>
-               </div>
-               <span className="self-end px-3 py-1 text-base text-white border border-solid rounded-md bg-fuchsia-950 bg-opacity-60 border-stone-900">50% OFF</span>
-             </div>
-           
-             <button
-               className="w-full px-6 py-2 mt-4 text-lg font-medium text-white border rounded bg-fuchsia-800 hover:bg-fuchsia-600"
-               onClick={() => navigate("/login")}
-             >
-               View Details
-             </button>
-           </div>
-            ))}
-          </div>
+          {!loading && !error && (
+            <div className="grid w-full grid-cols-1 gap-10 ml-16 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course) => (
+                <div
+                  key={course._id}
+                  className="flex flex-col justify-between h-full p-5 transition duration-300 border rounded-lg shadow-md bg-stone-950 border-fuchsia-700 hover:scale-105 w-80"
+                >
+                  <img
+                    src={
+                      course.image
+                        ? (course.image.startsWith("http") ? course.image : `${API_URL}${course.image}`)
+                        : course.imageUrl
+                        ? (course.imageUrl.startsWith("http") ? course.imageUrl : `${API_URL}${course.imageUrl}`)
+                        : ""
+                    }
+                    alt={course.name}
+                    className="object-cover w-full h-48 rounded"
+                  />
+
+                  <h3 className="flex items-center justify-center mt-4 text-xl font-semibold text-white">{course.name}</h3>
+
+                  <div className="flex items-center justify-center mt-2">
+                    <span className="px-3 py-1 text-sm text-white rounded-full bg-fuchsia-900">
+                      Instructor: {course.instructor?.username || course.instructor?.name || course.instructor?.email || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-center items-center gap-4 mt-3.5">
+                    <span className="px-3 py-1 text-base text-white border border-solid rounded-md bg-fuchsia-950 bg-opacity-60 border-stone-900">
+                      HINDI
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-5 mt-auto">
+                    <div className="flex flex-col">
+                      <span className="mt-4 text-base text-white">Limited Time Discount</span>
+                      <p className="mt-4 text-lg text-white">
+                        ₹{course.price}{" "}
+                        <span className="ml-2 text-gray-400 line-through">
+                          ₹{course.originalPrice || course.price * 2}
+                        </span>
+                      </p>
+                    </div>
+                    <span className="self-end px-3 py-1 text-base text-white border border-solid rounded-md bg-fuchsia-950 bg-opacity-60 border-stone-900">50% OFF</span>
+                  </div>
+
+                  <button
+                    className="w-full px-6 py-2 mt-4 text-lg font-medium text-white border rounded bg-fuchsia-800 hover:bg-fuchsia-600"
+                    onClick={() => navigate(`/courses/${course.slug || course._id}`)}
+                  >
+                    View Details
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </>
   );
-}
-
+};
 
 export default Courses;
+

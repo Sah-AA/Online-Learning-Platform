@@ -14,20 +14,18 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch total students
-        const studentRes = await axios.get("http://localhost:3000/users/getAllUser");
-
-        // Fetch total courses
+        const token = localStorage.getItem("token");
+        const studentRes = await axios.get("http://localhost:3000/users/getAllUser", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         const courseRes = await axios.get("http://localhost:3000/courses");
-
-        // Fetch total instructors
-        const instructorRes = await axios.get("http://localhost:3000/instructors");
+        const instructorRes = studentRes; // reuse list; filter by role
 
         // Update stats state
         setStats({
           totalStudents: studentRes.data.length,
           totalCourses: courseRes.data.courses.length, // Assuming `courses` is the key in the response
-          activeInstructors: instructorRes.data.instructors.length, // Assuming `instructors` is the key in the response
+          activeInstructors: (instructorRes.data || []).filter((u) => (u.role || "").toLowerCase() === "instructor").length,
         });
       } catch (error) {
         console.error("Error fetching stats:", error);
@@ -40,11 +38,11 @@ const AdminDashboard = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      const response = await axios.post("http://localhost:3000/users/logout", {}, { withCredentials: true });
+      const response = await axios.post("http://localhost:3000/auth/logout", {}, { withCredentials: true });
       if (response.status === 200) {
         alert("Logout successful");
         localStorage.removeItem("token"); // Clear token if stored in localStorage
-        navigate("/admin/login"); // Redirect to login page
+        navigate("/login"); // Redirect to login page
       } else {
         alert("Logout failed");
       }

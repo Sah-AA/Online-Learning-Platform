@@ -1,5 +1,5 @@
 import React from "react";
-import Navbar1 from "../Navbar1";
+import Navbar from "../UnifiedNavbar";
 
 const NodejsSyllabus = () => {
     const sections = [
@@ -76,7 +76,7 @@ const NodejsSyllabus = () => {
           background: "radial-gradient(circle at top center, #410640 5%, #000000 25%)",
         }}
       >
-        <Navbar1 />
+        <Navbar />
         <div className="flex flex-col items-center">
         <h2 className="mt-32 text-center text-white text-7xl">
           Complete

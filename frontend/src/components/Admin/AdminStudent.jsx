@@ -16,7 +16,10 @@ const AdminStudent = () => {
   useEffect(() => {
     const fetchStudents = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/users/getAllUser");
+        const token = localStorage.getItem("token");
+        const res = await axios.get("http://localhost:3000/users/getAllUser", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         console.log("Fetched data:", res.data);
         setStudentData(res.data);
       } catch (error) {
@@ -33,7 +36,10 @@ const AdminStudent = () => {
     );
     if (confirmDelete) {
       try {
-        await axios.delete(`http://localhost:3000/users/delete/${id}`);
+        const token = localStorage.getItem("token");
+        await axios.delete(`http://localhost:3000/users/delete/${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         setStudentData(studentData.filter((student) => student._id !== id));
       } catch (error) {
         console.error("Error deleting student:", error);
@@ -44,7 +50,7 @@ const AdminStudent = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      const response = await axios.post("http://localhost:3000/users/logout", {}, { withCredentials: true });
+      const response = await axios.post("http://localhost:3000/auth/logout", {}, { withCredentials: true });
       if (response.status === 200) {
         alert("Logout successful");
         localStorage.removeItem("token"); // Clear token if stored in localStorage

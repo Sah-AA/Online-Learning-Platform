@@ -1,8 +1,8 @@
 const validateInstructor = (req, res, next) => {
-    const { name, email } = req.body;
+    const { username, email, password, phone, gender } = req.body;
 
-    if (!name || !email) {
-        return res.status(400).json({ message: 'Name and email are required' });
+    if (!username || !email || !password || !phone || !gender) {
+        return res.status(400).json({ message: 'Username, email, password, phone and gender are required' });
     }
 
     next();

@@ -4,60 +4,59 @@ import axios from "axios";
 
 const AdminInstructor = () => {
   const navigate = useNavigate();
-  const [instructors, setInstructors] = useState([]); // State to store instructors
+  const [instructors, setInstructors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  // Fetch instructors from the backend
+  const fetchInstructors = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:3000/users/getAllUser", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to fetch users");
+      const onlyInstructors = (data || []).filter((u) => u.role === "instructor");
+      setInstructors(onlyInstructors);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchInstructors = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/instructors");
-        if (response.ok) {
-          const data = await response.json();
-          setInstructors(data.instructors); // Update state with fetched instructors
-        } else {
-          console.error("Failed to fetch instructors");
-        }
-      } catch (error) {
-        console.error("Error fetching instructors:", error);
-      }
-    };
-
     fetchInstructors();
-  }, []); // Empty dependency array ensures this runs only once
+  }, []);
 
-  // Handle delete instructor
+  // Handle delete instructor (removes the user entirely)
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm("Are you sure you want to delete this instructor?");
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/instructors/${id}`, {
+      const res = await fetch(`http://localhost:3000/users/delete/${id}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        alert("Instructor deleted successfully!");
-        setInstructors((prevInstructors) =>
-          prevInstructors.filter((instructor) => instructor._id !== id)
-        );
-      } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.message}`);
-      }
-    } catch (error) {
-      console.error("Error deleting instructor:", error);
-      alert("An error occurred while deleting the instructor.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to delete instructor");
+      alert("Instructor deleted successfully!");
+      setInstructors((prev) => prev.filter((inst) => inst._id !== id));
+    } catch (err) {
+      alert(err.message);
     }
   };
 
   // Handle logout
   const handleLogout = async () => {
     try {
-      const response = await axios.post("http://localhost:3000/users/logout", {}, { withCredentials: true });
+      const response = await axios.post("http://localhost:3000/auth/logout", {}, { withCredentials: true });
       if (response.status === 200) {
-        alert("Logout successful");
-        localStorage.removeItem("token"); // Clear token if stored in localStorage
-        navigate("/admin/login"); // Redirect to login page
+        localStorage.removeItem("token");
+        navigate("/admin/login");
       } else {
         alert("Logout failed");
       }
@@ -115,15 +114,23 @@ const AdminInstructor = () => {
 
         {/* Main Section */}
         <div className="relative flex-1 p-8 max-sm:p-4">
-          <h1 className="mb-6 text-5xl text-white max-sm:text-4xl">
-            Instructors
-          </h1>
-          <button
-            className="mb-8 h-16 text-xl text-white border rounded-lg border-fuchsia-700 border-solid cursor-pointer bg-stone-950 w-[228px] max-sm:w-full transition-colors duration-300 hover:bg-fuchsia-700 hover:text-black"
-            onClick={() => navigate("/admin/addinstructors")}
-          >
-            Add new instructor
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <h1 className="text-5xl text-white max-sm:text-4xl">Instructors</h1>
+            <div className="flex gap-3">
+              <button
+                className="h-12 px-4 text-base text-white border rounded-lg border-fuchsia-700 bg-stone-900 hover:bg-fuchsia-700 hover:text-black"
+                onClick={fetchInstructors}
+              >
+                Refresh
+              </button>
+              <button
+                className="h-12 px-4 text-base text-white border rounded-lg border-fuchsia-700 bg-stone-900 hover:bg-fuchsia-700 hover:text-black"
+                onClick={() => navigate("/admin/addinstructors")}
+              >
+                Promote User
+              </button>
+            </div>
+          </div>
 
           {/* Table with rounded corners */}
           <div className="overflow-x-auto border border-white rounded-lg">
@@ -137,32 +144,40 @@ const AdminInstructor = () => {
                 </tr>
               </thead>
               <tbody>
-                {instructors.map((instructor) => (
-                  <tr
-                    key={instructor._id}
-                    className="transition-colors duration-200 border-t border-white hover:bg-stone-900"
-                  >
-                    <td className="px-6 py-4 text-base">{instructor._id}</td>
-                    <td className="px-6 py-4 text-base">{instructor.name}</td>
-                    <td className="px-6 py-4 text-base">{instructor.email}</td>
-                    <td className="px-6 py-4 text-base">
-                      <div className="flex gap-3">
-                        <button
-                          onClick={() => navigate(`/admin/editinstructor/${instructor._id}`)}
-                          className="px-4 py-2 text-sm text-white transition-colors rounded bg-stone-800 hover:bg-fuchsia-700 hover:text-black"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(instructor._id)}
-                          className="px-4 py-2 text-sm text-white transition-colors rounded bg-stone-800 hover:bg-red-600 hover:text-black"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {loading ? (
+                  <tr><td className="px-6 py-4" colSpan={4}>Loading...</td></tr>
+                ) : error ? (
+                  <tr><td className="px-6 py-4 text-red-400" colSpan={4}>{error}</td></tr>
+                ) : instructors.length === 0 ? (
+                  <tr><td className="px-6 py-4" colSpan={4}>No instructors yet. Promote a user to get started.</td></tr>
+                ) : (
+                  instructors.map((instructor) => (
+                    <tr
+                      key={instructor._id}
+                      className="transition-colors duration-200 border-t border-white hover:bg-stone-900"
+                    >
+                      <td className="px-6 py-4 text-base">{instructor._id}</td>
+                      <td className="px-6 py-4 text-base">{instructor.username}</td>
+                      <td className="px-6 py-4 text-base">{instructor.email}</td>
+                      <td className="px-6 py-4 text-base">
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => navigate(`/admin/editinstructor/${instructor._id}`)}
+                            className="px-4 py-2 text-sm text-white transition-colors rounded bg-stone-800 hover:bg-fuchsia-700 hover:text-black"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(instructor._id)}
+                            className="px-4 py-2 text-sm text-white transition-colors rounded bg-stone-800 hover:bg-red-600 hover:text-black"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const AdminCourse = () => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]); // State to store courses
 
@@ -10,7 +11,7 @@ const AdminCourse = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const response = await fetch("http://localhost:3000/courses");
+        const response = await fetch(`${API_URL}/courses`);
         if (response.ok) {
           const data = await response.json();
           setCourses(data.courses); // Update state with fetched courses
@@ -31,8 +32,10 @@ const AdminCourse = () => {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`http://localhost:3000/courses/delete/${id}`, {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/courses/delete/${id}`, {
         method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
       if (response.ok) {
@@ -51,7 +54,7 @@ const AdminCourse = () => {
   // Handle logout
   const handleLogout = async () => {
     try {
-      const response = await axios.post("http://localhost:3000/users/logout", {}, { withCredentials: true });
+      const response = await axios.post("http://localhost:3000/auth/logout", {}, { withCredentials: true });
       if (response.status === 200) {
         alert("Logout successful");
         localStorage.removeItem("token"); // Clear token if stored in localStorage
@@ -141,15 +144,19 @@ const AdminCourse = () => {
               >
                 <div className="p-2 text-base text-white">{course._id}</div>
                 <div className="p-2">
-                  <img
-                    src={`http://localhost:3000${course.imageUrl}`}
-                    alt="Course"
-                    className="w-16 h-16 rounded"
-                  />
+                    <img
+                      src={
+                        course.image
+                          ? (course.image.startsWith("http") ? course.image : `${API_URL}${course.image}`)
+                          : ""
+                      }
+                      alt="Course"
+                      className="w-16 h-16 rounded object-cover"
+                    />
                 </div>
                 <div className="p-2 text-base text-white">{course.name}</div>
                 <div className="p-2 text-base text-white">
-                  {course.instructor?.name || "N/A"}
+                  {course.instructor?.username || course.instructor?.name || "N/A"}
                 </div>
                 <div className="p-2 text-base text-white">{course.price}</div>
                 <div className="flex items-center p-2 text-base text-white">

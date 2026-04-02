@@ -1,28 +1,35 @@
-import React from "react";
+import React, { useEffect } from "react";
 import profile from "/images/profile.png";
 import { useNavigate } from "react-router-dom";
-import Navbar1 from "../components/Navbar1";
-import axios from "axios";
+import Navbar from "../components/UnifiedNavbar";
+import { useAuth } from "../context/AuthContext";
 
 function Profile() {
   const navigate = useNavigate();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  console.log("User data in Profile:", user);
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/login");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Handle logout
   const handleLogout = async () => {
-    try {
-      const response = await axios.post("http://localhost:3000/users/logout", {}, { withCredentials: true });
-      if (response.status === 200) {
-        alert("Logout successful");
-        localStorage.removeItem("token"); // Clear token if stored in localStorage
-        navigate("/login"); // Redirect to login page
-      } else {
-        alert("Logout failed");
-      }
-    } catch (error) {
-      console.error("Error during logout:", error);
-      alert("An error occurred during logout.");
+    const result = await logout();
+    if (result.success) {
+      navigate("/login");
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-white bg-black">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div
@@ -32,14 +39,14 @@ function Profile() {
           "radial-gradient(circle at top center, #410640 5%, #000000 50%)",
       }}
     >
-      <Navbar1 />
+      <Navbar />
       <main className="w-full min-h-screen py-12">
         {/* Profile Section */}
         <section className="relative max-w-[500px] mx-auto bg-stone-900 p-10 rounded-lg shadow-md mt-12">
           {/* Profile Info */}
           <div className="flex items-center gap-8">
             <img
-              src={profile}
+              src={user?.profileImage || profile}
               alt="Profile"
               className="w-[110px] h-[110px] rounded-full border-4 border-fuchsia-700"
             />
@@ -55,28 +62,28 @@ function Profile() {
               <div>
                 <label className="text-sm text-gray-400">Full Name</label>
                 <div className="p-4 text-lg border rounded-lg bg-stone-800 border-fuchsia-700">
-                  Raj Vardhan singh
+                  {user?.username || "N/A"}
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-gray-400">Email</label>
                 <div className="p-4 text-lg border rounded-lg bg-stone-800 border-fuchsia-700">
-                rajsingh@gmail.com
+                  {user?.email || "N/A"}
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-gray-400">Password</label>
                 <div className="p-4 text-lg border rounded-lg bg-stone-800 border-fuchsia-700">
-                  00000
+                  ••••••
                 </div>
               </div>
 
               <div>
                 <label className="text-sm text-gray-400">Phone</label>
                 <div className="p-4 text-lg border rounded-lg bg-stone-800 border-fuchsia-700">
-                  9934622433
+                  {user?.phone || "N/A"}
                 </div>
               </div>
             </div>

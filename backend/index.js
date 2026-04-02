@@ -1,8 +1,11 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // DB connection
 const dbconnection = require('./config/dbconnection');
@@ -19,20 +22,21 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Import routes
 const userRouter = require('./routes/userRoutes');
 const courseRoutes = require('./routes/courseRoute');
 const instructorRoutes = require('./routes/instructorRoute');
 const adminRoutes = require('./routes/adminRoute');
-const instructorLoginRoutes = require('./routes/instructorLogin');
+const authRoutes = require('./routes/authRoute');
 
 // Mount routes (before static)
 app.use('/users', userRouter);
 app.use('/courses', courseRoutes);
 app.use('/instructors', instructorRoutes);
 app.use('/admin', adminRoutes);
-app.use('/instructor', instructorLoginRoutes);
+app.use('/auth', authRoutes);
 
 // Serve uploaded images statically (after routes)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -44,5 +48,5 @@ app.get('/', (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`✅ Server running at http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });

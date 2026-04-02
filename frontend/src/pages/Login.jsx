@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student"); // default student
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,35 +15,15 @@ const Login = () => {
     setError("");
 
     try {
-      let res;
-      if (role === "admin") {
-        res = await fetch("http://localhost:3000/admin/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        if (res.ok) navigate("/admin/dashboard");
-      } else if (role === "instructor") {
-        res = await fetch("http://localhost:3000/instructor/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        if (res.ok) navigate("/instructor/dashboard");
+      const result = await login(email, password);
+      
+      if (result.success) {
+        navigate(result.redirectPath || "/");
       } else {
-        res = await axios.post("http://localhost:3000/users/login", {
-          email,
-          password,
-        });
-        if (res.status === 200) navigate("/home2");
-      }
-
-      if (!res.ok) {
-        const errData = await res.json();
-        setError(errData.message || "Login failed");
+        setError(result.error);
       }
     } catch (err) {
-      setError("Connection error");
+      setError("Login failed. Please try again.");
     }
   };
 
@@ -54,17 +34,19 @@ const Login = () => {
           <span>Code</span>
           <span className="text-purple-900">Hub</span>
         </h1>
-        <nav className="hidden space-x-10 text-lg lg:flex">
-          <Link to="/" className="text-white transition hover:text-fuchsia-500">Home</Link>
-          <Link to="/course" className="text-white transition hover:text-fuchsia-500">Course</Link>
-          <Link to="/about" className="text-white transition hover:text-fuchsia-500">About</Link>
-        </nav>
-        <Link 
-          to="/signup" 
-          className="px-3 py-1.5 text-xl bg-fuchsia-700 rounded-[32px] transition hover:bg-fuchsia-500"
-        >
-          SignUp
-        </Link>
+        <div className="flex items-center gap-4">
+          <nav className="hidden space-x-10 text-lg lg:flex">
+            <Link to="/" className="text-white transition hover:text-fuchsia-500">Home</Link>
+            <Link to="/course" className="text-white transition hover:text-fuchsia-500">Course</Link>
+            <Link to="/about" className="text-white transition hover:text-fuchsia-500">About</Link>
+          </nav>
+          <Link
+            to="/signup"
+            className="px-4 py-2 text-sm font-semibold text-white transition rounded-full border border-fuchsia-700 hover:bg-fuchsia-700"
+          >
+            Sign up
+          </Link>
+        </div>
       </header>
 
       <main className="flex justify-center pt-20">
@@ -72,19 +54,6 @@ const Login = () => {
           <div className="absolute bg-fuchsia-700 blur-[50px] h-[220px] top-[80px] w-[200px] z-[1]" />
           <div className="relative px-0 py-14 border border-fuchsia-700 shadow-[0_4px_400px_#000] w-[500px] z-[2] rounded-2xl max-sm:px-4 max-sm:py-6 max-sm:w-[85%]">
             <h2 className="mb-4 text-3xl font-semibold text-center">Login</h2>
-
-            {/* Role Dropdown */}
-            <div className="flex justify-center mb-6">
-              <select 
-                value={role} 
-                onChange={(e) => setRole(e.target.value)}
-                className="px-4 py-2 text-xl bg-stone-950 border border-fuchsia-700 rounded-lg text-white w-[200px] max-sm:w-full"
-              >
-                <option value="student">Student</option>
-                <option value="instructor">Instructor</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
 
             <div className="flex flex-col items-center w-full gap-6">
               <Input
@@ -149,3 +118,4 @@ const Button = ({ children, className = "", ...props }) => (
 );
 
 export default Login;
+

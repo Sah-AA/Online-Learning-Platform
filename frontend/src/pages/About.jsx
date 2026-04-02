@@ -1,9 +1,9 @@
 import React from 'react';
 import raj from '/images/raj.png';
 import princepic from '/images/princepic.png';
-
 import Rahul from '/images/rahul.png';
 import team from '/images/team.jpg';
+import Navbar from '../components/UnifiedNavbar';
 
 const LeaderCard = ({ image, name, role }) => {
     return (
@@ -21,6 +21,7 @@ const LeaderCard = ({ image, name, role }) => {
       </article>
     );
   };
+
 const About = () => {
     return (
 
@@ -32,6 +33,8 @@ const About = () => {
           "radial-gradient(circle at top center, #410640 5%, #000000 50%)",
       }}
     >
+      {/* Unified Navbar - automatically handles auth state */}
+      <Navbar />
       <section className="flex flex-col items-center w-full px-8 mb-28 max-md:px-5 max-md:max-w-full">
         <h2 className="self-end mr-12 text-8xl text-white max-md:mt-10 max-md:mr-2.5 max-md:max-w-full max-md:text-4xl">
           WHERE DREAMS

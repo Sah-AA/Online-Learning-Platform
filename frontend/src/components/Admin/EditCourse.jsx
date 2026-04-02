@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
 const EditCourse = () => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const { courseId } = useParams(); // Get the course ID from the URL
   const navigate = useNavigate();
 
@@ -23,7 +24,7 @@ const EditCourse = () => {
         console.log("Fetching course with ID:", courseId);
 
         // Fetch course details
-        const courseResponse = await axios.get(`http://localhost:3000/courses/get/${courseId}`);
+        const courseResponse = await axios.get(`${API_URL}/courses/get/${courseId}`);
         console.log("Course Response:", courseResponse.data);
         const fetchedCourse = courseResponse.data.course;
 
@@ -31,13 +32,14 @@ const EditCourse = () => {
           name: fetchedCourse.name || "",
           instructor: fetchedCourse.instructor?._id || "",
           price: fetchedCourse.price || "",
-          imageUrl: fetchedCourse.imageUrl || "",
+          imageUrl: fetchedCourse.image || fetchedCourse.imageUrl || "",
         });
 
         // Fetch instructors for the dropdown
-        const instructorResponse = await axios.get("http://localhost:3000/instructors");
-        console.log("Instructors Response:", instructorResponse.data);
-        setInstructors(instructorResponse.data.instructors);
+        const instructorResponse = await axios.get(`${API_URL}/users/getAllUser`);
+        const instructorList = (instructorResponse.data || []).filter((u) => u.role === "instructor");
+        console.log("Instructors Response:", instructorList);
+        setInstructors(instructorList);
 
         setLoading(false);
       } catch (error) {
@@ -134,7 +136,7 @@ const EditCourse = () => {
             <option value="">Select Instructor</option>
             {instructors.map((instructor) => (
               <option key={instructor._id} value={instructor._id}>
-                {instructor.name}
+                {instructor.username || instructor.name || instructor.email}
               </option>
             ))}
           </select>
@@ -162,7 +164,11 @@ const EditCourse = () => {
           {course.imageUrl && !(course.imageUrl instanceof File) && (
             <div className="mt-4">
               <img
-                src={`http://localhost:3000${course.imageUrl}`}
+                src={
+                  course.imageUrl.startsWith("http")
+                    ? course.imageUrl
+                    : `${API_URL}${course.imageUrl}`
+                }
                 alt="Course Preview"
                 className="object-cover w-32 h-32 rounded"
               />

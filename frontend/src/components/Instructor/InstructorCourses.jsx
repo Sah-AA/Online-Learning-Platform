@@ -1,16 +1,28 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const InstructorCourses = () => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const instructorId = useMemo(() => {
+    try {
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload?.id || payload?._id || null;
+    } catch {
+      return null;
+    }
+  }, [token]);
 
   // Fetch courses from the backend
   useEffect(() => {
     const fetchCourses = async () => {
+      if (!instructorId) return;
       try {
-        const instructorId = localStorage.getItem('instructorId');
-        const response = await fetch(`http://localhost:3000/courses/instructor/${instructorId}`);
+        const response = await fetch(`${API_URL}/courses/instructor/${instructorId}`);
         if (response.ok) {
           const data = await response.json();
           setCourses(data.courses);
@@ -23,7 +35,7 @@ const InstructorCourses = () => {
     };
 
     fetchCourses();
-  }, []);
+  }, [API_URL, instructorId]);
 
   // Handle delete course (placeholder)
   const handleDelete = async (id) => {
@@ -128,7 +140,13 @@ const InstructorCourses = () => {
                 <div className="p-2 text-base text-white">{course._id}</div>
                 <div className="p-2">
                   <img
-                    src={`http://localhost:3000${course.imageUrl}`}
+                    src={
+                      course.image
+                        ? (course.image.startsWith("http") ? course.image : `${API_URL}${course.image}`)
+                        : course.imageUrl
+                        ? (course.imageUrl.startsWith("http") ? course.imageUrl : `${API_URL}${course.imageUrl}`)
+                        : ""
+                    }
                     alt="Course"
                     className="w-16 h-16 rounded"
                   />

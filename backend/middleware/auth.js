@@ -1,13 +1,17 @@
 const jwt = require("jsonwebtoken");
-const SECRET_KEY = "ourProjectSecretKey"; // Replace with your actual secret key
 
 const authMiddleware = (req, res, next) => {
-  const token = req.cookies.token;
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+  const cookieToken = req.cookies.token;
+  const token = bearerToken || cookieToken;
 
-  if (!token) return res.status(401).json({ message: "Access denied. No token provided." });
+  if (!token) {
+    return res.status(401).json({ message: "Access denied. No token provided." });
+  }
 
   try {
-    const decoded = jwt.verify(token, SECRET_KEY);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {

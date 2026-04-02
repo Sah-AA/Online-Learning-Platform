@@ -1,24 +1,16 @@
+import { AuthProvider } from "./context/AuthContext";
+import { CourseProvider } from "./context/CourseContext";
 import AppRoutes from "./routes/AppRoutes";
-
-// import { BrowserRouter } from "react-router-dom";
-
-
-
 
 function App() {
   return (
-    <>
-   <AppRoutes />
-
-
-
-    {/* <BrowserRouter>
-
-   </BrowserRouter>  */}
-   
-
-  </>
-)
+    <AuthProvider>
+      <CourseProvider>
+        <AppRoutes />
+      </CourseProvider>
+    </AuthProvider>
+  );
 }
 
 export default App;
+

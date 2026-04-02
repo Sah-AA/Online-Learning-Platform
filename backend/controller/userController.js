@@ -1,160 +1,127 @@
 const userModel = require('../models/userModel');
-
-
-const jwt = require('jsonwebtoken');
-const SECRET_KEY = "myapp@React"; // Ideally use process.env.SECRET_KEY
-
-const createUser = async (req, res) => {
-  try {
-    const { username, email, password, phone, gender } = req.body;
-
-    const existingUser = await userModel.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    const newUser = new userModel({
-      username,
-      email,
-      password,
-      phone,
-      gender,
-    });
-
-    await newUser.save();
-
-    // 🔐 Generate JWT token
-    const token = jwt.sign({ id: newUser._id }, SECRET_KEY, { expiresIn: '1d' });
-
-    // 🍪 Set token in HTTP-only cookie
-    res
-      .cookie('token', token, {
-        httpOnly: true,
-        secure: false, // set to true if using HTTPS
-        sameSite: 'Lax',
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-      })
-      .status(201)
-      .json({ message: 'User registered successfully', user: newUser });
-  } catch (err) {
-    console.error('Error in createUser:', err);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
-  }
-};
+const bcrypt = require('bcrypt');
 
 const getUsers = async (req, res) => {
   try {
-    const users = await userModel.find();
-    res.status(200).json(users);
+    const users = await userModel.find().select('-password');
+    return res.status(200).json(users);
   } catch (err) {
     console.error('Error in getUsers:', err);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 };
 
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { username, email, phone, gender, password } = req.body;
+    const { username, email, phone, gender, password, role } = req.body;
 
-    // Check if the email is already taken by another user (excluding the current user)
     const existingUserWithEmail = await userModel.findOne({ email });
     if (existingUserWithEmail && existingUserWithEmail._id.toString() !== id) {
       return res.status(400).json({ message: 'Email is already in use by another user.' });
     }
 
-    // Prepare the updated data
     const updatedData = { username, email, phone, gender };
 
-    // Include the password if provided
-    if (password) {
-      updatedData.password = password;
+    if (role) {
+      const allowed = ['user', 'admin', 'instructor'];
+      if (!allowed.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role value.' });
+      }
+      updatedData.role = role;
     }
 
-    // Proceed with updating the user
-    const user = await userModel.findByIdAndUpdate(id, updatedData, { new: true });
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      }
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
 
+    const user = await userModel.findByIdAndUpdate(id, updatedData, { new: true }).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    res.status(200).json({ message: 'User updated successfully', user });
+    return res.status(200).json({ message: 'User updated successfully', user });
   } catch (err) {
     console.error('Error in updateUser:', err);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 };
 
-// Delete user by ID
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-
     const user = await userModel.findByIdAndDelete(id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    res.status(200).json({ message: 'User deleted successfully' });
+    return res.status(200).json({ message: 'User deleted successfully' });
   } catch (err) {
     console.error('Error in deleteUser:', err);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 };
-
 
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await userModel.findById(id);
+    const user = await userModel.findById(id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json(user);
+    return res.status(200).json(user);
   } catch (err) {
     console.error('Error in getUserById:', err);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 };
 
-const loginUser = async (req, res) => {
+const getMe = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    const user = await userModel.findOne({ email });
+    const user = await userModel.findById(req.user.id).select('-password');
     if (!user) {
-      return res.status(400).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'User not found' });
     }
-
-    if (user.password !== password) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    res.status(200).json({ message: 'Login successful', user });
+    return res.status(200).json({ user });
   } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in getMe:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 
-
-const logoutUser = (req, res) => {
+const updateMe = async (req, res) => {
   try {
-    // Clear the token cookie
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: false, // Set to true if using HTTPS
-      sameSite: 'Lax',
-    });
-    res.status(200).json({ message: 'Logout successful' });
+    const id = req.user.id;
+    const { username, email, phone, gender, password } = req.body;
+
+    if (email) {
+      const existingUserWithEmail = await userModel.findOne({ email });
+      if (existingUserWithEmail && existingUserWithEmail._id.toString() !== id) {
+        return res.status(400).json({ message: 'Email is already in use by another user.' });
+      }
+    }
+
+    const updatedData = { username, email, phone, gender };
+
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      }
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
+    const user = await userModel.findByIdAndUpdate(id, updatedData, { new: true }).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({ message: 'Profile updated successfully', user });
   } catch (err) {
-    console.error('Logout error:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in updateMe:', err);
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 };
 
-
-
-
-
-module.exports = { createUser, getUsers, updateUser, deleteUser, getUserById, loginUser, logoutUser};
+module.exports = { getUsers, updateUser, deleteUser, getUserById, getMe, updateMe };

@@ -1,11 +1,14 @@
 # Node dependencies
 node_modules/
-
 */node_modules/
+
 # Env files
 .env
 .env.*
 **/.env
+
+# Uploaded user files
+backend/uploads/
 
 # Logs
 npm-debug.log*
@@ -14,3 +17,7 @@ yarn-error.log*
 pnpm-debug.log*
 logs/
 *.log
+
+# Build output
+dist/
+build/

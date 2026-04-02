@@ -1,34 +1,94 @@
 const Joi = require('joi');
 const courseModel = require('../models/courseModel');
-const instructorModel = require('../models/instructorModel');
+const userModel = require('../models/userModel');
 
-// Define the validation schema
-const courseSchema = Joi.object({
-  name: Joi.string().required(),
-  price: Joi.string().required(),
-  imageUrl: Joi.string().optional(),
+// Validation schemas
+const courseCreateSchema = Joi.object({
+  slug: Joi.string().trim().required(),
+  name: Joi.string().trim().required(),
+  title: Joi.string().trim().required(),
+  price: Joi.number().positive().required(),
   instructorId: Joi.string().required(),
+  titleHighlight: Joi.string().allow('', null),
+  titleSuffix: Joi.string().allow('', null),
+  subtitle: Joi.string().allow('', null),
+  description: Joi.string().allow('', null),
+  roadmap: Joi.string().allow('', null),
+  youtubeUrl: Joi.string().allow('', null),
+  learnButtonText: Joi.string().allow('', null),
+  tags: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string()
+  ).optional(),
+});
+
+const courseUpdateSchema = Joi.object({
+  slug: Joi.string().trim().optional(),
+  name: Joi.string().trim().optional(),
+  title: Joi.string().trim().optional(),
+  titleHighlight: Joi.string().allow('', null),
+  titleSuffix: Joi.string().allow('', null),
+  subtitle: Joi.string().allow('', null),
+  description: Joi.string().allow('', null),
+  roadmap: Joi.string().allow('', null),
+  youtubeUrl: Joi.string().allow('', null),
+  learnButtonText: Joi.string().allow('', null),
+  price: Joi.number().positive().optional(),
+  instructorId: Joi.string().optional(),
+  tags: Joi.alternatives().try(
+    Joi.array().items(Joi.string()),
+    Joi.string()
+  ).optional(),
 });
 
 const addCourse = async (req, res) => {
   try {
-    const { name, price, instructorId } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const { error } = courseCreateSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
 
-    if (!name || !price) {
-      return res.status(400).json({ message: 'Name and price are required' });
-    }
+    const {
+      slug,
+      name,
+      title,
+      price,
+      instructorId,
+      titleHighlight,
+      titleSuffix,
+      subtitle,
+      description,
+      roadmap,
+      youtubeUrl,
+      learnButtonText,
+      tags,
+    } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : null;
 
-    const instructor = await instructorModel.findById(instructorId);
+    const instructor = await userModel.findOne({ _id: instructorId, role: 'instructor' });
     if (!instructor) {
       return res.status(404).json({ message: 'Instructor not found' });
     }
 
+    const normalizedTags = Array.isArray(tags)
+      ? tags
+      : typeof tags === 'string' && tags.length
+        ? tags.split(',').map(t => t.trim()).filter(Boolean)
+        : [];
+
     const course = new courseModel({
+      slug,
       name,
+      title,
+      titleHighlight,
+      titleSuffix,
+      subtitle,
+      description,
+      roadmap,
+      youtubeUrl,
+      learnButtonText,
       price,
-      imageUrl,
+      image,
       instructor: instructorId,
+      tags: normalizedTags,
     });
 
     await course.save();
@@ -44,7 +104,7 @@ const getCourses = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const courses = await courseModel
       .find()
-      .populate('instructor', 'name email')
+      .populate('instructor', 'username email')
       .skip((page - 1) * limit)
       .limit(Math.min(parseInt(limit), 50));
 
@@ -58,7 +118,7 @@ const getCourses = async (req, res) => {
 const getInstructorCourses = async (req, res) => {
   try {
     const { id } = req.params;
-    const courses = await courseModel.find({ instructor: id }).populate('instructor', 'name email');
+    const courses = await courseModel.find({ instructor: id }).populate('instructor', 'username email');
     res.status(200).json({ courses });
   } catch (error) {
     console.error('Error fetching instructor courses:', error);
@@ -69,30 +129,59 @@ const getInstructorCourses = async (req, res) => {
 const editCourse = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, instructorId } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+    const { error } = courseUpdateSchema.validate(req.body);
+    if (error) return res.status(400).json({ message: error.details[0].message });
 
-    console.log("Updating course with data:", { name, price, instructorId, imageUrl });
-
-    if (!name || !price) {
-      return res.status(400).json({ message: 'Name and price are required' });
-    }
+    const {
+      slug,
+      name,
+      title,
+      titleHighlight,
+      titleSuffix,
+      subtitle,
+      description,
+      roadmap,
+      youtubeUrl,
+      learnButtonText,
+      price,
+      instructorId,
+      tags,
+    } = req.body;
+    const image = req.file ? `/uploads/${req.file.filename}` : undefined;
 
     if (instructorId) {
-      const instructor = await instructorModel.findById(instructorId);
+      const instructor = await userModel.findOne({ _id: instructorId, role: 'instructor' });
       if (!instructor) {
         return res.status(404).json({ message: 'Instructor not found' });
       }
     }
 
+    const normalizedTags = Array.isArray(tags)
+      ? tags
+      : typeof tags === 'string' && tags.length
+        ? tags.split(',').map(t => t.trim()).filter(Boolean)
+        : undefined;
+
+    const update = {
+      slug,
+      name,
+      title,
+      titleHighlight,
+      titleSuffix,
+      subtitle,
+      description,
+      roadmap,
+      youtubeUrl,
+      learnButtonText,
+      price,
+      instructor: instructorId,
+    };
+    if (image) update.image = image;
+    if (normalizedTags) update.tags = normalizedTags;
+
     const updatedCourse = await courseModel.findByIdAndUpdate(
       id,
-      {
-        name,
-        price,
-        instructor: instructorId,
-        ...(imageUrl && { imageUrl }),
-      },
+      update,
       { new: true }
     );
 
@@ -127,7 +216,7 @@ const deleteCourse = async (req, res) => {
 const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
-    const course = await courseModel.findById(id).populate('instructor', 'name email');
+    const course = await courseModel.findById(id).populate('instructor', 'username email');
     if (!course) {
       return res.status(404).json({ message: 'Course not found' });
     }

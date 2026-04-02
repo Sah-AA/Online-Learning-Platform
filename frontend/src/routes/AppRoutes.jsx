@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Footer from "../components/Footer";
 
 // Public pages
-import { About, Home, Courses, Login, PrivacyPolicy, Profile, EditProfile, MyCourses } from "../pages/Index";
+import { About, Home, Courses, Login, Signup, PrivacyPolicy, Profile, EditProfile, MyCourses } from "../pages/Index";
 
 // Admin & instructor areas
 import { AddCourse, AdminCourse, AdminDashboard, AdminInstructor, AdminStudent, EditStudent, AddInstructors, EditCourse, EditInstructor } from "../components/Admin/Index";
@@ -30,6 +30,7 @@ function AppRoutes() {
       <Routes>
         {/* Auth */}
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
         {/* Public */}
         <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
